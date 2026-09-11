@@ -1,0 +1,11 @@
+# IP Blocklist Component Configuration Example
+# Copy to terraform.tfvars and customize for your environment
+
+aws_region  = "us-west-2"
+aws_profile = ""
+
+venue = "pdc-cds-dev"
+cicd  = "iac"
+
+# MCP / USGS permission boundary. Leave empty only in accounts that do not require one.
+permissions_boundary_arn = ""

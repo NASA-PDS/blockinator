@@ -17,12 +17,11 @@
 
 # -- Project information -----------------------------------------------------
 
-# TODO - Update with your project name
-project = 'My PDS Project'
-copyright = '2025 California Institute of Technology'
+project = 'PDS Blockinator'
+copyright = '2026 California Institute of Technology'
 author = 'NASA Planetary Data System'
-release = '0.0'
-version = '0.0'
+release = '0.0.0'
+version = '0.0.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -63,11 +62,10 @@ html_static_path = ['_static']
 
 html_logo = '_static/images/PDS_Planets.png'
 
-# TODO - Update with your user/org and repo
 html_context = {
     'display_github': True,
-    "github_user": "nasa-pds",
-    "github_repo": "template-repo-python",
+    "github_user": "NASA-PDS",
+    "github_repo": "blockinator",
     "github_version": "main/docs/source/"
 }
 

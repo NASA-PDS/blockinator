@@ -1,4 +1,11 @@
 Contact Us
 ==========
 
-Feel free to post a question on the `Discussion Board (working link TBD) <https://github.com/NASA-PDS/PROJECT/discussions>`_ or submit a request to the `PDS Help Desk <https://pds.nasa.gov/?feedback=true>`_ for any additional questions, comments or concerns.
+Questions, comments, and operational issues can go to the
+`PDS Help Desk <https://pds.nasa.gov/?feedback=true>`_ or
+`pds-operator@jpl.nasa.gov <mailto:pds-operator@jpl.nasa.gov>`_.
+
+For this repository specifically, use
+`GitHub Issues <https://github.com/NASA-PDS/blockinator/issues>`_
+or start a
+`Discussion <https://github.com/NASA-PDS/blockinator/discussions>`_.
