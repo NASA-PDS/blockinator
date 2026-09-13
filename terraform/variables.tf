@@ -24,7 +24,7 @@ variable "permissions_boundary_arn" {
 
 variable "venue" {
   type        = string
-  description = "Deployment venue/environment identifier (e.g., pdc-cds-dev)"
+  description = "Deployment venue/environment identifier"
 }
 
 variable "common_tags" {

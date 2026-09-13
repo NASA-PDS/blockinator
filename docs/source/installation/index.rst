@@ -130,24 +130,17 @@ Apply
 From the repository's ``terraform/`` directory::
 
     cp terraform.tfvars.example terraform.tfvars
-    # Edit terraform.tfvars: set venue (e.g. pdc-cds-dev), region, profile,
-    # and permissions_boundary_arn as required by the account.
-
-    terraform init -backend-config=backend-configs/dev.hcl
+    # Edit terraform.tfvars
+    terraform init -backend-config=.../path/to/backend.hcl
     terraform plan
     terraform apply
 
-Use ``backend-configs/test.hcl`` or ``backend-configs/prod.hcl`` for those
-venues. If you already initialized against another venue, add
-``-reconfigure`` so Terraform does not try to migrate state between
-buckets.
+Substitute a path to the desired backend configuration (usually from the
+``pds-cds-deploy`` repository). If you already initialized against another
+backend, add ``-reconfigure`` so Terraform does not try to migrate state
+between buckets.
 
-Copy ``backend-configs/<venue>.hcl.example`` if you need a new backend
-file. Each file sets the S3 ``bucket``, ``key``, and ``region`` for
-remote state.
-
-Outputs are also written under SSM prefix
-``/pds/cds-infra/ip-blocklist/``:
+Outputs are also written under SSM prefix ``/pds/cds-infra/ip-blocklist/``:
 
 * ``table-name``
 * ``queue-url``
@@ -155,6 +148,7 @@ Outputs are also written under SSM prefix
 * ``ipv6-ipset-arn``
 * ``audit-log-group``
 * ``operator-policy-arn``
+
 
 One-time Web ACL attach (WAF owners only)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

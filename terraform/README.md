@@ -23,9 +23,8 @@ This component does **not** modify the CloudFront Web ACL. CloudFront already co
 
 To deploy the infrastructure to support the IP blocklist, use Terraform as follows:
 ```bash
-cd terraform/backend-configs
-cp <venue>.hcl.example dev.hcl  # Or substitute test.hcl or prod.hcl
-# Edit the new .hcl file copied from above
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars
 terraform init -backend-config=../dev.hcl  # Or substitute test.hcl or prod.hcl
 terraform plan
 terraform apply

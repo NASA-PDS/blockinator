@@ -2,7 +2,7 @@
 #
 # Initialize with:
 #   cd terraform
-#   terraform init -backend-config=backend-configs/VENUE.hcl
+#   terraform init -backend-config=.../path/to/backend.hcl
 
 terraform {
   required_version = ">= 1.16.0, < 2.0.0"
