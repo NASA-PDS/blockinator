@@ -136,9 +136,9 @@ From the repository's ``terraform/`` directory::
     terraform apply
 
 Substitute a path to the desired backend configuration (usually from the
-``pds-cds-deploy`` repository). If you already initialized against another
-backend, add ``-reconfigure`` so Terraform does not try to migrate state
-between buckets.
+``cds-infra-deploy`` repository in the SCIP GitLab). If you already
+initialized against another backend, add ``-reconfigure`` so Terraform
+does not try to migrate state between buckets.
 
 Outputs are also written under SSM prefix ``/pds/cds-infra/ip-blocklist/``:
 
