@@ -1,0 +1,8 @@
+# The labda.tf uses Terraform's `archive_file` to create ZIP archives
+# of the Python λ functions. The build directory contains these ZIP archives,
+# which should not be committed to the repository.
+build/
+# @jordanpadams says backend configurations must now come from the
+# cds-infra-deploy repository. ∴ ignore backend-configs/ which should no
+# longer exist.
+backend-configs/

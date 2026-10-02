@@ -1,0 +1,7 @@
+# IP Blocklist Component Configuration Example
+# Copy to terraform.tfvars and customize for your environment
+
+# MCP / USGS permission boundary. Leave empty only in accounts that do not require one.
+# In fact, you can even skip copying this to terraform.tfvars if you're not even planning
+# on filling in `permissions_boundary_arn`. Easy, right?
+permissions_boundary_arn = ""

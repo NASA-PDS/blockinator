@@ -1,6 +1,6 @@
-PDS XYZ Tool (update licensing below per specific organization)
+PDS Blockinator
 
-Copyright 2025, California Institute of Technology ("Caltech").
+Copyright © 2026, California Institute of Technology ("Caltech").
 U.S. Government sponsorship acknowledged.
 
 All rights reserved.
