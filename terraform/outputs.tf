@@ -41,7 +41,7 @@ resource "aws_ssm_parameter" "audit_log_group" {
 resource "aws_ssm_parameter" "operator_policy_arn" {
   name        = "${local.ssm_prefix}/operator-policy-arn"
   type        = "String"
-  value       = data.aws_iam_policy.operator.arn
+  value       = local.operator_policy_arn
   description = "IAM policy ARN to attach to operators who run pds-blockinator"
   tags        = local.tags
 }
@@ -72,11 +72,11 @@ output "ssm_prefix" {
 }
 
 output "updater_role_arn" {
-  value       = data.aws_iam_role.updater.arn
+  value       = local.updater_role_arn
   description = "Only IAM role with wafv2:UpdateIPSet on the blocklist IP sets"
 }
 
 output "operator_policy_arn" {
-  value       = data.aws_iam_policy.operator.arn
+  value       = local.operator_policy_arn
   description = "IAM policy to attach to operators who run pds-blockinator"
 }

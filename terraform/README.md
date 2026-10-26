@@ -14,7 +14,7 @@ The Terraform is split into **two independent stages with separate state**, base
 | **1. Admin** | [`admin/`](admin/) | **System administrators only** (elevated / "super user" access, e.g. PDS "Project Admin" role) | **Once** per venue, before anything else | IAM roles & policies, WAFv2 IP sets |
 | **2. Platform** | this directory | **Any PDS platform engineer** (e.g. PDS "Power User" role) | As needed (new venues, Lambda code changes, config updates, etc.) | DynamoDB, SQS, Lambdas, log groups, schedules, SSM parameters |
 
-The admin stage must be applied **first**: the platform stage looks up the IAM roles, operator policy, and IP sets by name (see `data.tf`) and fails with a clear "not found" error if they don't exist yet. After the one-time admin apply (plus the one-time manual Web ACL attach below), platform engineers never need elevated access again — day-to-day infrastructure changes all live in this stage.
+The admin stage must be applied **first**: the platform stage references the IAM roles, operator policy, and IP sets by name (see `data.tf`), and its IP set lookups fail with a clear "not found" error if the admin stage hasn't run yet. After the one-time admin apply (plus the one-time manual Web ACL attach below), platform engineers never need elevated access again — day-to-day infrastructure changes all live in this stage.
 
 
 ## Stage 1 — Admin (system administrators, run once)

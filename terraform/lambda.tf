@@ -49,7 +49,7 @@ resource "aws_cloudwatch_log_group" "audit" {
 resource "aws_lambda_function" "updater" {
   function_name    = "${local.name_prefix}-updater"
   description      = "Single-writer WAF IPSet updater for the operator blocklist"
-  role             = data.aws_iam_role.updater.arn # created by the admin stage
+  role             = local.updater_role_arn # created by the admin stage
   handler          = "updater.lambda_handler"
   runtime          = "python3.12"
   filename         = data.archive_file.updater.output_path
@@ -78,7 +78,7 @@ resource "aws_lambda_function" "updater" {
 resource "aws_lambda_function" "sweeper" {
   function_name    = "${local.name_prefix}-sweeper"
   description      = "Expire TTL'd blocklist rows and enqueue REMOVE"
-  role             = data.aws_iam_role.sweeper.arn # created by the admin stage
+  role             = local.sweeper_role_arn # created by the admin stage
   handler          = "sweeper.lambda_handler"
   runtime          = "python3.12"
   filename         = data.archive_file.sweeper.output_path
@@ -100,7 +100,7 @@ resource "aws_lambda_function" "sweeper" {
 resource "aws_lambda_function" "audit" {
   function_name    = "${local.name_prefix}-audit"
   description      = "Structured audit log of blocklist DynamoDB mutations"
-  role             = data.aws_iam_role.audit.arn # created by the admin stage
+  role             = local.audit_role_arn # created by the admin stage
   handler          = "audit.lambda_handler"
   runtime          = "python3.12"
   filename         = data.archive_file.audit.output_path
