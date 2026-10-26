@@ -1,0 +1,5 @@
+# Blockinator ADMIN stage configuration example
+# Copy to terraform.tfvars and customize for your environment
+
+# Deployment venue, e.g. pdc-cds-dev
+venue = "pdc-cds-dev"

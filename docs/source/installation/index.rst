@@ -4,8 +4,10 @@ Installation
 Blockinator has two installable pieces:
 
 1. The ``pds-blockinator`` command, which any operator can install locally.
-2. The AWS infrastructure (DynamoDB, SQS, Lambdas, WAF IP sets), which is
-   applied once per venue with Terraform.
+2. The AWS infrastructure (DynamoDB, SQS, Lambdas, WAF IP sets), applied
+   with Terraform in **two stages**: an admin stage run once per venue by
+   system administrators, and a platform stage run as needed by PDS
+   platform engineers.
 
 Most readers only need the command-line tool. Infrastructure steps are for
 the people who own the PDS CloudFront / WAF account.
@@ -87,20 +89,70 @@ If none of those succeed, the command exits with a message telling you what
 to set.
 
 
-AWS infrastructure (once per venue)
------------------------------------
+AWS infrastructure (two stages)
+-------------------------------
 
 .. important::
 
-  Only PDS Platform Engineers at the Engineering Node need to set up the AWS
-  infrastructure.
+  Only PDS personnel at the Engineering Node need to set up the AWS
+  infrastructure — and *which* personnel depends on the stage, below.
 
-Apply this only if you are standing up or changing the Blockinator stack.
-It requires Terraform **1.16.0 or later** (but not 2.x) and AWS access
-typical of the PDS **Project Admin** role.
+The Terraform is split into two independent stages with separate state,
+based on the level of AWS access required. Both require Terraform
+**1.16.0 or later** (but not 2.x).
 
-What Terraform creates
-~~~~~~~~~~~~~~~~~~~~~~
++--------------+---------------------+-------------------------------+-----------------+
+| Stage        | Directory           | Who runs it                   | When            |
++==============+=====================+===============================+=================+
+| **Admin**    | ``terraform/admin/``| System administrators with    | Once per venue, |
+|              |                     | elevated "super user" access  | first           |
+|              |                     | (PDS **Project Admin** role)  |                 |
++--------------+---------------------+-------------------------------+-----------------+
+| **Platform** | ``terraform/``      | Any PDS platform engineer     | As needed       |
+|              |                     | (PDS **Power User** role)     |                 |
++--------------+---------------------+-------------------------------+-----------------+
+
+The admin stage must be applied first: the platform stage looks up the
+IAM roles, operator policy, and IP sets by name and fails with a clear
+"not found" error if they do not exist yet. After the one-time admin
+apply (plus the one-time Web ACL attach below), platform engineers never
+need elevated access again.
+
+Stage 1: Admin (system administrators, run once)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Creates the privileged resources:
+
++----------------------------------+------------------------------------------------------+
+| Resource                         | Role                                                 |
++==================================+======================================================+
+| IAM roles ``*-updater``,         | Lambda execution roles; only the updater role may    |
+| ``*-sweeper``, ``*-audit``       | call ``wafv2:UpdateIPSet``                           |
++----------------------------------+------------------------------------------------------+
+| IAM policy ``*-operator``        | Attach to operators who run ``pds-blockinator``      |
++----------------------------------+------------------------------------------------------+
+| WAFv2 IP sets (IPv4 and IPv6)    | CloudFront-scoped lists in ``us-east-1``             |
++----------------------------------+------------------------------------------------------+
+
+Deployment goes through Terragrunt in the ``cds-infra-deploy``
+repository, which supplies the S3 backend, state key, and inputs::
+
+    cd cds-infra-deploy/venues/dev/blockinator/admin   # or test/prod
+    terragrunt init
+    terragrunt plan
+    terragrunt apply
+
+The leaf's path yields state key ``blockinator/admin.tfstate``, which
+**must differ** from the platform stage's
+``blockinator/terraform.tfstate``. (To run plain Terraform instead, see
+``terraform/admin/README.md`` in the repository for how to pass the
+backend settings and state key via ``-backend-config``.) System
+administrators also perform the one-time Web ACL attach described below.
+
+Stage 2: Platform (platform engineers, run as needed)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Creates everything else:
 
 +----------------------------------+------------------------------------------------------+
 | Resource                         | Role                                                 |
@@ -115,30 +167,41 @@ What Terraform creates
 +----------------------------------+------------------------------------------------------+
 | Lambda ``*-audit``               | Structured logs from the DynamoDB stream             |
 +----------------------------------+------------------------------------------------------+
-| WAFv2 IP sets (IPv4 and IPv6)    | CloudFront-scoped lists in ``us-east-1``             |
+| SSM parameters                   | Published discovery values for the CLI               |
 +----------------------------------+------------------------------------------------------+
 
 Resource names are ``<venue>-pds-ip-blocklist-…``. For venue
 ``pdc-cds-dev`` that is ``pdc-cds-dev-pds-ip-blocklist-policies``, and so on.
 
-This stack does **not** modify the CloudFront Web ACL. After apply, a WAF
-owner must attach the two IP sets once (see below).
+Deployment goes through Terragrunt in the ``cds-infra-deploy``
+repository::
 
-Apply
-~~~~~
+    cd cds-infra-deploy/venues/dev/blockinator/terraform   # or test/prod
+    terragrunt init
+    terragrunt plan
+    terragrunt apply
 
-From the repository's ``terraform/`` directory::
+To run plain Terraform instead (for example during development), work
+from the repository's ``terraform/`` directory and pass the venue's
+backend settings plus the state key by hand::
 
     cp terraform.tfvars.example terraform.tfvars
     # Edit terraform.tfvars
-    terraform init -backend-config=.../path/to/backend.hcl
+    terraform init \
+        -backend-config=.../path/to/venue-backend.hcl \
+        -backend-config='key=blockinator/terraform.tfstate'
     terraform plan
     terraform apply
 
-Substitute a path to the desired backend configuration (usually from the
-``cds-infra-deploy`` repository in the SCIP GitLab). If you already
-initialized against another backend, add ``-reconfigure`` so Terraform
-does not try to migrate state between buckets.
+Take the backend values (bucket, region, lock table) from
+``cds-infra-deploy``. If you already initialized against another
+backend, add ``-reconfigure`` so Terraform does not try to migrate state
+between buckets.
+
+If ``terraform plan`` fails with errors like *"no IAM role found matching
+criteria"* or *"WAFv2 IPSet not found"*, the admin stage has not been
+applied for this venue yet — ask a system administrator to run Stage 1
+first.
 
 Outputs are also written under SSM prefix ``/pds/cds-infra/ip-blocklist/``:
 
@@ -149,9 +212,13 @@ Outputs are also written under SSM prefix ``/pds/cds-infra/ip-blocklist/``:
 * ``audit-log-group``
 * ``operator-policy-arn``
 
+Neither stage modifies the CloudFront Web ACL. After both stages apply, a
+system administrator / WAF owner must attach the two IP sets once (see
+below).
 
-One-time Web ACL attach (WAF owners only)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One-time Web ACL attach (system administrators / WAF owners only)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Attach **both** IP sets to the existing CloudFront Web ACL, **above** any
 future allowlist rule, and without changing other rules.

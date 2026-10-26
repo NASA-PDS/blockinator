@@ -49,7 +49,7 @@ resource "aws_cloudwatch_log_group" "audit" {
 resource "aws_lambda_function" "updater" {
   function_name    = "${local.name_prefix}-updater"
   description      = "Single-writer WAF IPSet updater for the operator blocklist"
-  role             = aws_iam_role.updater.arn
+  role             = data.aws_iam_role.updater.arn # created by the admin stage
   handler          = "updater.lambda_handler"
   runtime          = "python3.12"
   filename         = data.archive_file.updater.output_path
@@ -62,23 +62,23 @@ resource "aws_lambda_function" "updater" {
   # CloudFront-scoped IP sets live in us-east-1 regardless of var.aws_region.
   environment {
     variables = {
-      IPV4_IP_SET_ID   = aws_wafv2_ip_set.ipv4.id
-      IPV4_IP_SET_NAME = aws_wafv2_ip_set.ipv4.name
-      IPV6_IP_SET_ID   = aws_wafv2_ip_set.ipv6.id
-      IPV6_IP_SET_NAME = aws_wafv2_ip_set.ipv6.name
+      IPV4_IP_SET_ID   = data.aws_wafv2_ip_set.ipv4.id
+      IPV4_IP_SET_NAME = data.aws_wafv2_ip_set.ipv4.name
+      IPV6_IP_SET_ID   = data.aws_wafv2_ip_set.ipv6.id
+      IPV6_IP_SET_NAME = data.aws_wafv2_ip_set.ipv6.name
       WAF_SCOPE        = "CLOUDFRONT"
       WAF_REGION       = "us-east-1"
     }
   }
 
-  depends_on = [aws_iam_role_policy.updater, aws_cloudwatch_log_group.updater]
+  depends_on = [aws_cloudwatch_log_group.updater]
   tags       = local.tags
 }
 
 resource "aws_lambda_function" "sweeper" {
   function_name    = "${local.name_prefix}-sweeper"
   description      = "Expire TTL'd blocklist rows and enqueue REMOVE"
-  role             = aws_iam_role.sweeper.arn
+  role             = data.aws_iam_role.sweeper.arn # created by the admin stage
   handler          = "sweeper.lambda_handler"
   runtime          = "python3.12"
   filename         = data.archive_file.sweeper.output_path
@@ -93,14 +93,14 @@ resource "aws_lambda_function" "sweeper" {
     }
   }
 
-  depends_on = [aws_iam_role_policy.sweeper, aws_cloudwatch_log_group.sweeper]
+  depends_on = [aws_cloudwatch_log_group.sweeper]
   tags       = local.tags
 }
 
 resource "aws_lambda_function" "audit" {
   function_name    = "${local.name_prefix}-audit"
   description      = "Structured audit log of blocklist DynamoDB mutations"
-  role             = aws_iam_role.audit.arn
+  role             = data.aws_iam_role.audit.arn # created by the admin stage
   handler          = "audit.lambda_handler"
   runtime          = "python3.12"
   filename         = data.archive_file.audit.output_path
@@ -108,7 +108,7 @@ resource "aws_lambda_function" "audit" {
   timeout          = 60
   memory_size      = 128
 
-  depends_on = [aws_iam_role_policy.audit, aws_cloudwatch_log_group.audit]
+  depends_on = [aws_cloudwatch_log_group.audit]
   tags       = local.tags
 }
 
