@@ -16,6 +16,11 @@ output "audit_role_arn" {
   description = "IAM role for the DynamoDB-stream audit Lambda"
 }
 
+output "deployer_role_arn" {
+  value       = aws_iam_role.deployer.arn
+  description = "IAM role the platform stage assumes to deploy the Lambdas"
+}
+
 output "operator_policy_arn" {
   value       = aws_iam_policy.operator.arn
   description = "IAM policy to attach to operators who run pds-blockinator"

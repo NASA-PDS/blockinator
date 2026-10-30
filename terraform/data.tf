@@ -16,6 +16,7 @@ locals {
   sweeper_role_arn    = "${local.iam_arn_prefix}:role/${local.name_prefix}-sweeper"
   audit_role_arn      = "${local.iam_arn_prefix}:role/${local.name_prefix}-audit"
   operator_policy_arn = "${local.iam_arn_prefix}:policy/${local.name_prefix}-operator"
+  deployer_role_arn   = "${local.iam_arn_prefix}:role/${local.name_prefix}-deployer"
 }
 
 # CloudFront-scoped IP sets live in us-east-1 regardless of var.aws_region.

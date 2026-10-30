@@ -114,9 +114,12 @@ based on the level of AWS access required. Both require Terraform
 
 The admin stage must be applied first: the platform stage looks up the
 IAM roles, operator policy, and IP sets by name and fails with a clear
-"not found" error if they do not exist yet. After the one-time admin
-apply (plus the one-time Web ACL attach below), platform engineers never
-need elevated access again.
+"not found" error if they do not exist yet. Creating a Lambda requires
+``iam:PassRole`` on its execution role, which platform engineers lack, so
+the platform stage assumes the admin stage's ``*-deployer`` role for the
+three Lambda functions only. After the one-time admin apply (plus the
+one-time Web ACL attach below), platform engineers never need elevated
+access again.
 
 Stage 1: Admin (system administrators, run once)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,6 +133,9 @@ Creates the privileged resources:
 | ``*-sweeper``, ``*-audit``       | call ``wafv2:UpdateIPSet``                           |
 +----------------------------------+------------------------------------------------------+
 | IAM policy ``*-operator``        | Attach to operators who run ``pds-blockinator``      |
++----------------------------------+------------------------------------------------------+
+| IAM role ``*-deployer``          | Assumed by platform engineers in stage 2 to deploy   |
+|                                  | the Lambdas (``iam:PassRole`` on their roles)        |
 +----------------------------------+------------------------------------------------------+
 | WAFv2 IP sets (IPv4 and IPv6)    | CloudFront-scoped lists in ``us-east-1``             |
 +----------------------------------+------------------------------------------------------+

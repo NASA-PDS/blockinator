@@ -33,6 +33,12 @@ variable "cicd" {
   default     = "iac"
 }
 
+variable "deployer_principal_arns" {
+  description = "ARN patterns (ArnLike) of the IAM roles allowed to assume the deployer role, i.e. the platform engineers' roles in this account"
+  type        = list(string)
+  default     = ["arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*AWSReservedSSO_Project-Power-User_*"]
+}
+
 variable "ssm_prefix" {
   description = "SSM prefix where the platform stage publishes its outputs; must match that stage's computed prefix. Empty uses /pds/<component_name>/ip-blocklist."
   type        = string

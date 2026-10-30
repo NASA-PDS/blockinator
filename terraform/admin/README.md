@@ -10,6 +10,7 @@
 | IAM role `*-pds-ip-blocklist-sweeper` | Lambda execution role for TTL expiry (DynamoDB query/update + SQS send) |
 | IAM role `*-pds-ip-blocklist-audit` | Lambda execution role for DynamoDB-stream audit logging |
 | IAM managed policy `*-pds-ip-blocklist-operator` | Attach to humans/automation that run `pds-blockinator` (no `wafv2:*`) |
+| IAM role `*-pds-ip-blocklist-deployer` | Assumed by platform engineers so the platform stage can create the Lambdas, which requires `iam:PassRole` on their execution roles. Trust is limited to the roles matching `deployer_principal_arns` (default: the `Project-Power-User` SSO role); permissions are limited to passing the three execution roles to Lambda and managing this component's functions. Because the deployer can deploy the updater Lambda, anyone who can assume it can, in effect, change these IP sets |
 | WAFv2 IP sets (IPv4 + IPv6, `CLOUDFRONT` scope, `us-east-1`) | Enforcement lists; attached to the existing Web ACL **once**, manually |
 
 The DynamoDB table, SQS queues, Lambdas, and log groups these IAM policies grant access to are created *later* by the platform stage. Their ARNs are constructed in `locals.tf` from the shared `<venue>-pds-ip-blocklist` naming convention, so **resource names must never drift** between the two stages.

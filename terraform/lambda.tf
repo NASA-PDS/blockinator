@@ -47,6 +47,7 @@ resource "aws_cloudwatch_log_group" "audit" {
 }
 
 resource "aws_lambda_function" "updater" {
+  provider         = aws.lambda_deployer
   function_name    = "${local.name_prefix}-updater"
   description      = "Single-writer WAF IPSet updater for the operator blocklist"
   role             = local.updater_role_arn # created by the admin stage
@@ -76,6 +77,7 @@ resource "aws_lambda_function" "updater" {
 }
 
 resource "aws_lambda_function" "sweeper" {
+  provider         = aws.lambda_deployer
   function_name    = "${local.name_prefix}-sweeper"
   description      = "Expire TTL'd blocklist rows and enqueue REMOVE"
   role             = local.sweeper_role_arn # created by the admin stage
@@ -98,6 +100,7 @@ resource "aws_lambda_function" "sweeper" {
 }
 
 resource "aws_lambda_function" "audit" {
+  provider         = aws.lambda_deployer
   function_name    = "${local.name_prefix}-audit"
   description      = "Structured audit log of blocklist DynamoDB mutations"
   role             = local.audit_role_arn # created by the admin stage

@@ -195,9 +195,12 @@ through this pipeline.
 These roles and the operator policy are privileged resources, so they are
 created by the admin Terraform stage (``terraform/admin/``), which system
 administrators apply once per venue with elevated access. The platform
-stage (``terraform/``) creates no IAM at all — it looks the roles and
-policy up by name — so platform engineers can apply it whenever they need
-without "super user" permissions. See :doc:`../installation/index`.
+stage (``terraform/``) creates no IAM at all — it refers to the roles and
+policy by name — so platform engineers can apply it whenever they need
+without "super user" permissions. The one privilege it needs,
+``iam:PassRole`` to attach the execution roles to the Lambdas, comes from
+a narrowly scoped ``*-deployer`` role that the admin stage creates and
+platform engineers assume. See :doc:`../installation/index`.
 
 
 SSM discovery
