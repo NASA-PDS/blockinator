@@ -12,18 +12,23 @@
 # change this component's WAF IP sets. That is inherent to letting platform
 # engineers deploy the updater Lambda.
 
+# The trust policy names the engineers' SSO role(s) by exact ARN rather than
+# trusting the account root: within one account that lets them assume this role
+# even if their permission set doesn't allow sts:AssumeRole. SSO role names
+# carry a per-account random suffix, hence the lookup. If the permission set is
+# ever re-provisioned (new role), re-apply this stage.
+data "aws_iam_roles" "deployer_principals" {
+  name_regex  = var.deployer_sso_role_name_regex
+  path_prefix = "/aws-reserved/sso.amazonaws.com/"
+}
+
 data "aws_iam_policy_document" "deployer_assume" {
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRole"]
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${local.account_id}:root"]
-    }
-    condition {
-      test     = "ArnLike"
-      variable = "aws:PrincipalArn"
-      values   = var.deployer_principal_arns
+      identifiers = sort(tolist(data.aws_iam_roles.deployer_principals.arns))
     }
   }
 }
@@ -34,6 +39,13 @@ resource "aws_iam_role" "deployer" {
   assume_role_policy   = data.aws_iam_policy_document.deployer_assume.json
   max_session_duration = 3600
   tags                 = local.tags
+
+  lifecycle {
+    precondition {
+      condition     = length(data.aws_iam_roles.deployer_principals.arns) > 0
+      error_message = "No SSO role matches deployer_sso_role_name_regex; platform engineers would be unable to assume the deployer role."
+    }
+  }
 }
 
 data "aws_iam_policy_document" "deployer" {
