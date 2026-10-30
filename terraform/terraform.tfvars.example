@@ -1,7 +1,6 @@
-# IP Blocklist Component Configuration Example
+# IP Blocklist PLATFORM stage configuration example
 # Copy to terraform.tfvars and customize for your environment
 
-# MCP / USGS permission boundary. Leave empty only in accounts that do not require one.
-# In fact, you can even skip copying this to terraform.tfvars if you're not even planning
-# on filling in `permissions_boundary_arn`. Easy, right?
-permissions_boundary_arn = ""
+# Deployment venue, e.g. pdc-cds-dev. Must match the venue the system
+# administrators used when applying the admin stage (terraform/admin).
+venue = "pdc-cds-dev"

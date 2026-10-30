@@ -5,7 +5,46 @@ This folder contains the cloud infrastructure (AWS Terraform) to support the Blo
 Please see the tracking issue for detailed specifications: [NASA-PDS/pdc-cds-infra#121](https://github.com/NASA-PDS/pdc-cds-infra/issues/121).
 
 
-## What this component creates
+## Two stages: who runs what
+
+The Terraform is split into **two independent stages with separate state**, based on the level of AWS access required:
+
+| Stage | Directory | Who runs it | When | What it creates |
+|-------|-----------|-------------|------|-----------------|
+| **1. Admin** | [`admin/`](admin/) | **System administrators only** (elevated / "super user" access, e.g. PDS "Project Admin" role) | **Once** per venue, before anything else | IAM roles & policies, WAFv2 IP sets |
+| **2. Platform** | this directory | **Any PDS platform engineer** (e.g. PDS "Power User" role) | As needed (new venues, Lambda code changes, config updates, etc.) | DynamoDB, SQS, Lambdas, log groups, schedules, SSM parameters |
+
+The admin stage must be applied **first**: the platform stage references the IAM roles, operator policy, and IP sets by name (see `data.tf`), and its IP set lookups fail with a clear "not found" error if the admin stage hasn't run yet. Creating a Lambda requires `iam:PassRole` on its execution role, which platform engineers lack, so the platform stage assumes the admin stage's `*-deployer` role for the three Lambda functions only. After the one-time admin apply (plus the one-time manual Web ACL attach below), platform engineers never need elevated access again — day-to-day infrastructure changes all live in this stage.
+
+
+## Stage 1 — Admin (system administrators, run once)
+
+See [`admin/README.md`](admin/README.md) for full instructions. Summary, from a clone of the `cds-infra-deploy` repository:
+
+```bash
+cd cds-infra-deploy/venues/dev/blockinator/admin   # Or substitute test/prod
+terragrunt init
+terragrunt plan
+terragrunt apply
+```
+
+The leaf's path gives this stage its own state key, `blockinator/admin.tfstate`, separate from the platform stage's `blockinator/terraform.tfstate`.
+
+This creates, per venue:
+
+| Resource | Purpose |
+|----------|---------|
+| IAM roles `*-updater`, `*-sweeper`, `*-audit` | Execution roles for the three Lambdas; **only** the updater role may call `wafv2:UpdateIPSet` |
+| IAM managed policy `*-operator` | Attach to humans/automation that run `pds-blockinator` (DynamoDB + SQS + SSM read; no `wafv2:*`) |
+| IAM role `*-deployer` | Assumed by platform engineers (by default, the `Project-Power-User` SSO role) during stage 2 to create/update the Lambdas; holds `iam:PassRole` on the three execution roles and nothing beyond Lambda management for this component |
+| WAFv2 IP sets (IPv4 + IPv6, `CLOUDFRONT` scope, `us-east-1`) | Enforcement lists attached to the existing Web ACL **once** (manual step below) |
+
+System administrators also perform the one-time Web ACL attach described at the bottom of this document.
+
+
+## Stage 2 — Platform (platform engineers, run as needed)
+
+### What this stage creates
 
 | Resource | Purpose |
 |----------|---------|
@@ -14,27 +53,42 @@ Please see the tracking issue for detailed specifications: [NASA-PDS/pdc-cds-inf
 | Lambda `*-updater` | **Only** identity that calls `wafv2:UpdateIPSet` (`reserved_concurrent_executions = 1`) |
 | Lambda `*-sweeper` | Every minute, expire rows whose `expires_at` has passed and enqueue REMOVE |
 | Lambda `*-audit` | Structured CloudWatch Logs from the DynamoDB stream |
-| WAFv2 IP sets (IPv4 + IPv6, `CLOUDFRONT` scope, `us-east-1`) | Enforcement list attached to the existing Web ACL **once** |
+| SSM parameters | Published discovery values for the CLI and WAF owners |
 
-This component does **not** modify the CloudFront Web ACL. CloudFront already consumes an external `waf_arn`. WAF owners must manually attach the IP sets (see below) as a one-time setup.
+This stage does **not** create IAM or WAF resources (those belong to the admin stage), and it does not modify the CloudFront Web ACL.
 
+### Deployment
 
-## Deployment
+Via Terragrunt, from a clone of the `cds-infra-deploy` repository:
 
-To deploy the infrastructure to support the IP blocklist, use Terraform as follows:
 ```bash
+cd cds-infra-deploy/venues/dev/blockinator/terraform   # Or substitute test/prod
+terragrunt init
+terragrunt plan
+terragrunt apply
+```
+
+Or standalone with plain Terraform (e.g. for development), supplying the backend settings by hand — a `-backend-config` file for the venue's bucket/region/lock table plus the inline state key:
+
+```bash
+cd terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars
-terraform init -backend-config=../dev.hcl  # Or substitute test.hcl or prod.hcl
+terraform init \
+  -backend-config=/path/to/venue-backend.hcl \
+  -backend-config='key=blockinator/terraform.tfstate'
 terraform plan
 terraform apply
 ```
-Outputs are also published under SSM prefix `/pds/cds-infra/ip-blocklist/` (`table-name`, `queue-url`, `ipv4-ipset-arn`, `ipv6-ipset-arn`, `audit-log-group`).
+
+Outputs are also published under SSM prefix `/pds/cds-infra/ip-blocklist/` (`table-name`, `queue-url`, `ipv4-ipset-arn`, `ipv6-ipset-arn`, `audit-log-group`, `operator-policy-arn`).
+
+If `terraform plan` fails with errors like *"no IAM role found matching criteria"* or *"WAFv2 IPSet not found"*, the admin stage has not been applied for this venue yet — ask a system administrator to run Stage 1 first.
 
 
-## One-time WAF attach (WAF owners only)
+## One-time WAF attach (system administrators / WAF owners only)
 
-After Terraform application, attach both IP sets to the existing CloudFront Web ACL **above** any future allowlist rule and **without** changing other rules as follows:
+After both stages are applied, attach both IP sets to the existing CloudFront Web ACL **above** any future allowlist rule and **without** changing other rules as follows:
 
 1.  Access the JPLOnlyWebACL in the AWS Console's WAF & Shield.
 2.  Click "Manage Rules".

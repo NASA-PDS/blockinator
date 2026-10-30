@@ -16,12 +16,6 @@ variable "aws_profile" {
   default     = ""
 }
 
-variable "permissions_boundary_arn" {
-  description = "ARN of the permissions boundary policy to attach to IAM roles. Empty skips the boundary."
-  type        = string
-  default     = ""
-}
-
 variable "venue" {
   type        = string
   description = "Deployment venue/environment identifier"

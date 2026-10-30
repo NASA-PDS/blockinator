@@ -69,6 +69,10 @@ htmlcov
 *.iml
 .vscode
 *.sublime-*
+*plan.md
+
+# Symlinks to related projects
+cds-infra-deploy
 
 # Shared objects (inc. Windows DLLs)
 *.dll

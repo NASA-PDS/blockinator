@@ -17,7 +17,7 @@ resource "aws_ssm_parameter" "queue_url" {
 resource "aws_ssm_parameter" "ipv4_ipset_arn" {
   name        = "${local.ssm_prefix}/ipv4-ipset-arn"
   type        = "String"
-  value       = aws_wafv2_ip_set.ipv4.arn
+  value       = data.aws_wafv2_ip_set.ipv4.arn
   description = "ARN of the CloudFront-scoped IPv4 blocklist IP set"
   tags        = local.tags
 }
@@ -25,7 +25,7 @@ resource "aws_ssm_parameter" "ipv4_ipset_arn" {
 resource "aws_ssm_parameter" "ipv6_ipset_arn" {
   name        = "${local.ssm_prefix}/ipv6-ipset-arn"
   type        = "String"
-  value       = aws_wafv2_ip_set.ipv6.arn
+  value       = data.aws_wafv2_ip_set.ipv6.arn
   description = "ARN of the CloudFront-scoped IPv6 blocklist IP set"
   tags        = local.tags
 }
@@ -41,7 +41,7 @@ resource "aws_ssm_parameter" "audit_log_group" {
 resource "aws_ssm_parameter" "operator_policy_arn" {
   name        = "${local.ssm_prefix}/operator-policy-arn"
   type        = "String"
-  value       = aws_iam_policy.operator.arn
+  value       = local.operator_policy_arn
   description = "IAM policy ARN to attach to operators who run pds-blockinator"
   tags        = local.tags
 }
@@ -57,12 +57,12 @@ output "queue_url" {
 }
 
 output "ipv4_ipset_arn" {
-  value       = aws_wafv2_ip_set.ipv4.arn
+  value       = data.aws_wafv2_ip_set.ipv4.arn
   description = "IPv4 WAFv2 IPSet ARN (attach to the CloudFront Web ACL once)"
 }
 
 output "ipv6_ipset_arn" {
-  value       = aws_wafv2_ip_set.ipv6.arn
+  value       = data.aws_wafv2_ip_set.ipv6.arn
   description = "IPv6 WAFv2 IPSet ARN (attach to the CloudFront Web ACL once)"
 }
 
@@ -72,11 +72,11 @@ output "ssm_prefix" {
 }
 
 output "updater_role_arn" {
-  value       = aws_iam_role.updater.arn
+  value       = local.updater_role_arn
   description = "Only IAM role with wafv2:UpdateIPSet on the blocklist IP sets"
 }
 
 output "operator_policy_arn" {
-  value       = aws_iam_policy.operator.arn
+  value       = local.operator_policy_arn
   description = "IAM policy to attach to operators who run pds-blockinator"
 }
