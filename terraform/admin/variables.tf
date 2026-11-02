@@ -36,7 +36,6 @@ variable "cicd" {
 variable "deployer_sso_role_name_regex" {
   description = "Regex matching the name of the platform engineers' IAM Identity Center (SSO) role(s) in this account; matching roles may assume the deployer role"
   type        = string
-  default     = "^AWSReservedSSO_Project-Power-User_"
 }
 
 variable "ssm_prefix" {

@@ -3,3 +3,7 @@
 
 # Deployment venue, e.g. pdc-cds-dev
 venue = "pdc-cds-dev"
+
+# Regex matching the platform engineers' IAM Identity Center (SSO) role name(s)
+# in this account; matching roles may assume the deployer role.
+deployer_sso_role_name_regex = "<sso-role-name-regex>"

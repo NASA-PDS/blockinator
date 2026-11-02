@@ -112,9 +112,9 @@ based on the level of AWS access required. Both require Terraform
 |              |                     | (PDS **Power User** role)     |                 |
 +--------------+---------------------+-------------------------------+-----------------+
 
-The admin stage must be applied first: the platform stage looks up the
-IAM roles, operator policy, and IP sets by name and fails with a clear
-"not found" error if they do not exist yet. Creating a Lambda requires
+The admin stage must be applied first: the platform stage constructs the
+IAM role ARNs by name and looks up the IP sets, failing with a clear
+"not found" error if the IP sets do not exist yet. Creating a Lambda requires
 ``iam:PassRole`` on its execution role, which platform engineers lack, so
 the platform stage assumes the admin stage's ``*-deployer`` role for the
 three Lambda functions only. After the one-time admin apply (plus the
@@ -191,10 +191,11 @@ To run plain Terraform instead (for example during development), work
 from the repository's ``terraform/`` directory and pass the venue's
 backend settings plus the state key by hand::
 
+    BACKEND_CONFIG="<path-to-venue-backend-file>"
     cp terraform.tfvars.example terraform.tfvars
     # Edit terraform.tfvars
     terraform init \
-        -backend-config=.../path/to/venue-backend.hcl \
+        -backend-config="${BACKEND_CONFIG}" \
         -backend-config='key=blockinator/terraform.tfstate'
     terraform plan
     terraform apply
@@ -204,10 +205,11 @@ Take the backend values (bucket, region, lock table) from
 backend, add ``-reconfigure`` so Terraform does not try to migrate state
 between buckets.
 
-If ``terraform plan`` fails with errors like *"no IAM role found matching
-criteria"* or *"WAFv2 IPSet not found"*, the admin stage has not been
-applied for this venue yet — ask a system administrator to run Stage 1
-first.
+If ``terraform plan`` fails with *"WAFv2 IPSet not found"*, with an STS
+``AccessDenied`` while assuming the ``*-deployer`` role, or if Lambda
+creation fails with an invalid-role error, the admin stage has not been
+applied for this venue yet (or the deployer role's trust does not include
+your SSO role) — ask a system administrator to run Stage 1 first.
 
 Outputs are also written under SSM prefix ``/pds/cds-infra/ip-blocklist/``:
 

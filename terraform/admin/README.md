@@ -10,7 +10,7 @@
 | IAM role `*-pds-ip-blocklist-sweeper` | Lambda execution role for TTL expiry (DynamoDB query/update + SQS send) |
 | IAM role `*-pds-ip-blocklist-audit` | Lambda execution role for DynamoDB-stream audit logging |
 | IAM managed policy `*-pds-ip-blocklist-operator` | Attach to humans/automation that run `pds-blockinator` (no `wafv2:*`) |
-| IAM role `*-pds-ip-blocklist-deployer` | Assumed by platform engineers so the platform stage can create the Lambdas, which requires `iam:PassRole` on their execution roles. Trust is limited to the SSO role(s) matching `deployer_sso_role_name_regex` (default: `Project-Power-User`), named by exact ARN; permissions are limited to passing the three execution roles to Lambda and managing this component's functions. Because the deployer can deploy the updater Lambda, anyone who can assume it can, in effect, change these IP sets |
+| IAM role `*-pds-ip-blocklist-deployer` | Assumed by platform engineers so the platform stage can create the Lambdas, which requires `iam:PassRole` on their execution roles. Trust is limited to the SSO role(s) matching `deployer_sso_role_name_regex` (set in the venue's Terragrunt config), named by exact ARN; permissions are limited to passing the three execution roles to Lambda and managing this component's functions. Because the deployer can deploy the updater Lambda, anyone who can assume it can, in effect, change these IP sets |
 | WAFv2 IP sets (IPv4 + IPv6, `CLOUDFRONT` scope, `us-east-1`) | Enforcement lists; attached to the existing Web ACL **once**, manually |
 
 The DynamoDB table, SQS queues, Lambdas, and log groups these IAM policies grant access to are created *later* by the platform stage. Their ARNs are constructed in `locals.tf` from the shared `<venue>-pds-ip-blocklist` naming convention, so **resource names must never drift** between the two stages.
@@ -35,17 +35,18 @@ After applying, perform the one-time Web ACL attach described in [the main READM
 `backend.tf` declares an *empty* `backend "s3" {}`, so every backend setting must be supplied at init time via `-backend-config`. That option can be repeated, and each occurrence is either a **file** of `KEY = VALUE` pairs or a single **inline** `KEY=VALUE`; Terraform merges them all. So:
 
 ```bash
+BACKEND_CONFIG="<path-to-venue-backend-file>"   # file: bucket, region, lock table
 cd terraform/admin
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars (venue)
+# Edit terraform.tfvars (venue, deployer_sso_role_name_regex)
 terraform init \
-  -backend-config=/path/to/venue-backend.hcl \      # file: bucket, region, lock table
-  -backend-config='key=blockinator/admin.tfstate'   # inline: the state key for THIS stage
+  -backend-config="${BACKEND_CONFIG}" \
+  -backend-config='key=blockinator/admin.tfstate'
 terraform plan
 terraform apply
 ```
 
-The venue backend file holds the per-venue settings (for dev: `bucket = "pds-dev-infra"`, `region = "us-west-2"`, `dynamodb_table = "pds-infra-tg-locks"`) and is not committed to this repository — take the values from `cds-infra-deploy` (`root.hcl` plus the venue's `venue.hcl`). The inline `key=` sets the one value that file doesn't: the state key, which **must** be `blockinator/admin.tfstate` so you don't clobber the platform stage's state.
+The venue backend file holds the per-venue settings (bucket, region, lock table) and is not committed to this repository — take the values from `cds-infra-deploy` (`root.hcl` plus the venue's `venue.hcl`). The inline `key=` sets the one value that file doesn't: the state key, which **must** be `blockinator/admin.tfstate` so you don't clobber the platform stage's state.
 
 ## Re-running
 

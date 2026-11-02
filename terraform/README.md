@@ -14,7 +14,7 @@ The Terraform is split into **two independent stages with separate state**, base
 | **1. Admin** | [`admin/`](admin/) | **System administrators only** (elevated / "super user" access, e.g. PDS "Project Admin" role) | **Once** per venue, before anything else | IAM roles & policies, WAFv2 IP sets |
 | **2. Platform** | this directory | **Any PDS platform engineer** (e.g. PDS "Power User" role) | As needed (new venues, Lambda code changes, config updates, etc.) | DynamoDB, SQS, Lambdas, log groups, schedules, SSM parameters |
 
-The admin stage must be applied **first**: the platform stage references the IAM roles, operator policy, and IP sets by name (see `data.tf`), and its IP set lookups fail with a clear "not found" error if the admin stage hasn't run yet. Creating a Lambda requires `iam:PassRole` on its execution role, which platform engineers lack, so the platform stage assumes the admin stage's `*-deployer` role for the three Lambda functions only. After the one-time admin apply (plus the one-time manual Web ACL attach below), platform engineers never need elevated access again — day-to-day infrastructure changes all live in this stage.
+The admin stage must be applied **first**: the platform stage constructs the IAM role ARNs by name and looks up the IP sets (see `data.tf`); its IP set lookups fail with a clear "not found" error if the admin stage hasn't run yet. Creating a Lambda requires `iam:PassRole` on its execution role, which platform engineers lack, so the platform stage assumes the admin stage's `*-deployer` role for the three Lambda functions only. After the one-time admin apply (plus the one-time manual Web ACL attach below), platform engineers never need elevated access again — day-to-day infrastructure changes all live in this stage.
 
 
 ## Stage 1 — Admin (system administrators, run once)
@@ -36,7 +36,7 @@ This creates, per venue:
 |----------|---------|
 | IAM roles `*-updater`, `*-sweeper`, `*-audit` | Execution roles for the three Lambdas; **only** the updater role may call `wafv2:UpdateIPSet` |
 | IAM managed policy `*-operator` | Attach to humans/automation that run `pds-blockinator` (DynamoDB + SQS + SSM read; no `wafv2:*`) |
-| IAM role `*-deployer` | Assumed by platform engineers (by default, the `Project-Power-User` SSO role) during stage 2 to create/update the Lambdas; holds `iam:PassRole` on the three execution roles and nothing beyond Lambda management for this component |
+| IAM role `*-deployer` | Assumed by platform engineers (the SSO role(s) named in the venue's Terragrunt config) during stage 2 to create/update the Lambdas; holds `iam:PassRole` on the three execution roles and nothing beyond Lambda management for this component |
 | WAFv2 IP sets (IPv4 + IPv6, `CLOUDFRONT` scope, `us-east-1`) | Enforcement lists attached to the existing Web ACL **once** (manual step below) |
 
 System administrators also perform the one-time Web ACL attach described at the bottom of this document.
@@ -71,11 +71,12 @@ terragrunt apply
 Or standalone with plain Terraform (e.g. for development), supplying the backend settings by hand — a `-backend-config` file for the venue's bucket/region/lock table plus the inline state key:
 
 ```bash
+BACKEND_CONFIG="<path-to-venue-backend-file>"
 cd terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars
 terraform init \
-  -backend-config=/path/to/venue-backend.hcl \
+  -backend-config="${BACKEND_CONFIG}" \
   -backend-config='key=blockinator/terraform.tfstate'
 terraform plan
 terraform apply
@@ -83,7 +84,7 @@ terraform apply
 
 Outputs are also published under SSM prefix `/pds/cds-infra/ip-blocklist/` (`table-name`, `queue-url`, `ipv4-ipset-arn`, `ipv6-ipset-arn`, `audit-log-group`, `operator-policy-arn`).
 
-If `terraform plan` fails with errors like *"no IAM role found matching criteria"* or *"WAFv2 IPSet not found"*, the admin stage has not been applied for this venue yet — ask a system administrator to run Stage 1 first.
+If `terraform plan` fails with *"WAFv2 IPSet not found"*, or if provider configuration fails with an STS `AccessDenied` while assuming the `*-deployer` role, or if Lambda creation fails with an invalid-role error, the admin stage has not been applied for this venue yet (or the deployer role's trust does not include your SSO role) — ask a system administrator to run Stage 1 first.
 
 
 ## One-time WAF attach (system administrators / WAF owners only)
