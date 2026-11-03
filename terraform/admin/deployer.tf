@@ -4,8 +4,9 @@
 # Creating a Lambda requires iam:PassRole on its execution role, which platform
 # engineers' SSO roles lack, and SSO (AWSReservedSSO_*) roles cannot be granted
 # extra permissions from inside the account. Instead, this role holds exactly
-# that PassRole grant (and Lambda management for this component's functions),
-# and platform engineers assume it. The platform stage uses it only for its
+# that PassRole grant and the function-lifecycle actions (create/update/get/
+# delete/tag/list/concurrency) on the three blocklist functions, and platform
+# engineers assume it. The platform stage uses it only for its
 # aws_lambda_function resources; everything else runs as the engineer.
 #
 # ⚠️ Whoever can assume this role can run code as the updater role, i.e. can
@@ -65,11 +66,35 @@ data "aws_iam_policy_document" "deployer" {
     }
   }
 
+  # Exactly the function-level actions Terraform's aws_lambda_function lifecycle
+  # performs, on the three functions this component owns. Deliberately NOT
+  # lambda:* : that would also allow AddPermission / CreateFunctionUrlConfig
+  # (public or cross-account exposure), InvokeFunction, and DeleteFunction /
+  # PutFunctionConcurrency against updater/sweeper. The event source mappings
+  # and lambda_permission are created by the engineer's own role (the default
+  # provider), not this one, so they need no grant here.
   statement {
-    sid       = "ManageBlocklistLambdas"
-    effect    = "Allow"
-    actions   = ["lambda:*"]
-    resources = ["arn:aws:lambda:${local.region}:${local.account_id}:function:${local.name_prefix}-*"]
+    sid    = "ManageBlocklistLambdas"
+    effect = "Allow"
+    actions = [
+      "lambda:CreateFunction",
+      "lambda:GetFunction",
+      "lambda:GetFunctionCodeSigningConfig",
+      "lambda:ListVersionsByFunction",
+      "lambda:UpdateFunctionCode",
+      "lambda:UpdateFunctionConfiguration",
+      "lambda:DeleteFunction",
+      "lambda:TagResource",
+      "lambda:UntagResource",
+      "lambda:ListTags",
+      "lambda:PutFunctionConcurrency",
+      "lambda:DeleteFunctionConcurrency",
+    ]
+    resources = [
+      "arn:aws:lambda:${local.region}:${local.account_id}:function:${local.name_prefix}-updater",
+      "arn:aws:lambda:${local.region}:${local.account_id}:function:${local.name_prefix}-sweeper",
+      "arn:aws:lambda:${local.region}:${local.account_id}:function:${local.name_prefix}-audit",
+    ]
   }
 }
 

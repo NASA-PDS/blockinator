@@ -36,7 +36,7 @@ This creates, per venue:
 |----------|---------|
 | IAM roles `*-updater`, `*-sweeper`, `*-audit` | Execution roles for the three Lambdas; **only** the updater role may call `wafv2:UpdateIPSet` |
 | IAM managed policy `*-operator` | Attach to humans/automation that run `pds-blockinator` (DynamoDB + SQS + SSM read; no `wafv2:*`) |
-| IAM role `*-deployer` | Assumed by platform engineers (the SSO role(s) named in the venue's Terragrunt config) during stage 2 to create/update the Lambdas; holds `iam:PassRole` on the three execution roles and nothing beyond Lambda management for this component |
+| IAM role `*-deployer` | Assumed by platform engineers (the SSO role(s) named in the venue's Terragrunt config) during stage 2 to create/update the Lambdas; holds `iam:PassRole` on the three execution roles and the create/update/get/delete/tag/list/concurrency actions on the three blocklist functions |
 | WAFv2 IP sets (IPv4 + IPv6, `CLOUDFRONT` scope, `us-east-1`) | Enforcement lists attached to the existing Web ACL **once** (manual step below) |
 
 System administrators also perform the one-time Web ACL attach described at the bottom of this document.
@@ -106,10 +106,10 @@ After both stages are applied, attach both IP sets to the existing CloudFront We
     -   Custom response
         -   Enable: ✓
         -   Response code: 403 (Forbidden)
-        -   Response body: `Unusual traffic has been detected that looks like automated/bot activity. If you require access to this data, please contact the PDS Help Desk at pds-operator@jpl.nasa.gov.`
+        -   Response body: use `blockinator-response-body` if available, otherwise: `Unusual traffic has been detected that looks like automated/bot activity. If you require access to this data, please contact the PDS Help Desk at pds-operator@jpl.nasa.gov.`
 7. Click Add rule.
 
-Repeat the above, but for the IPv6 version.
+Repeat the above, but for the IPv6 version. Then, click "Edit rule order" and place the two new blockinator rules at the very top, then click "Save rule order".
 
 And if you ever need the Web ACL name/id and IP set ARNs from SSM:
 ```bash
