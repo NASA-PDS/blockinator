@@ -1,6 +1,6 @@
 # IP Blocklist PLATFORM stage configuration example
 # Copy to terraform.tfvars and customize for your environment
 
-# Deployment venue, e.g. pdc-cds-dev. Must match the venue the system
+# Deployment venue identifier. Must match the venue the system
 # administrators used when applying the admin stage (terraform/admin).
-venue = "pdc-cds-dev"
+venue = "<venue>"

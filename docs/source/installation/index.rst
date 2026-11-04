@@ -176,8 +176,8 @@ Creates everything else:
 | SSM parameters                   | Published discovery values for the CLI               |
 +----------------------------------+------------------------------------------------------+
 
-Resource names are ``<venue>-pds-ip-blocklist-…``. For venue
-``pdc-cds-dev`` that is ``pdc-cds-dev-pds-ip-blocklist-policies``, and so on.
+Resource names are ``<venue>-pds-ip-blocklist-…``; for example, the table
+is ``<venue>-pds-ip-blocklist-policies``.
 
 Deployment goes through Terragrunt in the ``cds-infra-deploy``
 repository::
@@ -231,7 +231,7 @@ One-time Web ACL attach (system administrators / WAF owners only)
 Attach **both** IP sets to the existing CloudFront Web ACL, **above** any
 future allowlist rule, and without changing other rules.
 
-1. Open the Web ACL (for example ``JPLOnlyWebACL``) in WAF & Shield.
+1. Open the CloudFront Web ACL in WAF & Shield.
 2. Manage rules → Add rule → Custom rule.
 3. Configure:
 

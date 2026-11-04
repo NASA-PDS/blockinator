@@ -1,5 +1,6 @@
-# The platform stage does NOT read these outputs via remote state; it looks
-# the roles, policy, and IP sets up by name. These outputs are informational.
+# The platform stage does NOT read these outputs via remote state; it constructs
+# the IAM ARNs from the shared naming convention and looks the IP sets up by
+# name. These outputs are informational.
 
 output "updater_role_arn" {
   value       = aws_iam_role.updater.arn

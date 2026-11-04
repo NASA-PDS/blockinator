@@ -13,7 +13,7 @@ locals {
     }
   )
 
-  # Resource names: "<venue>-pds-ip-blocklist-…", e.g. pdc-cds-dev-pds-ip-blocklist-policies
+  # Resource names: "<venue>-pds-ip-blocklist-…", e.g. <venue>-pds-ip-blocklist-policies
   name_prefix = "${var.venue}-pds-ip-blocklist"
 
   # Must match the admin stage's ssm_prefix (its operator policy grants read on

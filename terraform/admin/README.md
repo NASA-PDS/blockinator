@@ -69,7 +69,8 @@ For venues (e.g. dev) deployed before this split, the IAM and WAF resources alre
 2. In `terraform/admin/`, import them (substitute the venue prefix, account ID, and the IP set IDs from `aws wafv2 list-ip-sets --scope CLOUDFRONT --region us-east-1`):
 
    ```bash
-   P=pdc-cds-dev-pds-ip-blocklist
+   VENUE="<your-venue>"
+   P="${VENUE}-pds-ip-blocklist"
    terraform import aws_iam_role.updater "$P-updater"
    terraform import aws_iam_role.sweeper "$P-sweeper"
    terraform import aws_iam_role.audit "$P-audit"

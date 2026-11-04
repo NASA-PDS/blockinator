@@ -13,7 +13,7 @@ locals {
     }
   )
 
-  # Resource names: "<venue>-pds-ip-blocklist-…", e.g. pdc-cds-dev-pds-ip-blocklist-policies
+  # Resource names: "<venue>-pds-ip-blocklist-…", e.g. <venue>-pds-ip-blocklist-policies
   # ⚠️ Must stay in lock-step with the platform stage (terraform/locals.tf): the IAM
   # policies below are written against ARNs constructed from this prefix.
   name_prefix = "${var.venue}-pds-ip-blocklist"

@@ -91,7 +91,7 @@ If `terraform plan` fails with *"WAFv2 IPSet not found"*, or if provider configu
 
 After both stages are applied, attach both IP sets to the existing CloudFront Web ACL **above** any future allowlist rule and **without** changing other rules as follows:
 
-1.  Access the JPLOnlyWebACL in the AWS Console's WAF & Shield.
+1.  Access the CloudFront Web ACL in the AWS Console's WAF & Shield.
 2.  Click "Manage Rules".
 3.  Click Add Rule.
 4.  Select "Custom Rule" then click Next.
@@ -101,7 +101,7 @@ After both stages are applied, attach both IP sets to the existing CloudFront We
     -   Rule name: "blockinator-ipv4"
     -   If a request: matches the statement
     -   Inspect: originates from an IP address in
-    -   Statement: `pdc-cds-dev-pds-ip-blocklist-ipv4`
+    -   Statement: `<venue>-pds-ip-blocklist-ipv4`
     -   Rule configuration: Source IP address
     -   Custom response
         -   Enable: ✓
