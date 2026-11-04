@@ -20,10 +20,10 @@ This package provides both an installable-anywhere Python tool plus the supporti
 - Python 3.13 or later, but less than Python 4
 - AWS access to the roles needed (typically the PDS "Power User" role)
 
-The cloud infrastructure only needs to be set up one time, and requires the following:
+The cloud infrastructure is split into two Terraform stages (see [terraform/README.md](terraform/README.md)), both requiring Terraform 1.16.0 or later, but less than Terraform 2.0.0:
 
-- Terraform 1.16.0 or later, but less than Terraform 2.0.0
-- AWS access to the roles needed (typical the PDS "Project Admin" role)
+1. **Admin stage** (`terraform/admin/`) — run **once** per venue by system administrators with elevated "super user" access (the PDS "Project Admin" role). It creates the IAM roles/policies and WAF IP sets.
+2. **Platform stage** (`terraform/`) — run **as needed** by any PDS platform engineer (the PDS "Power User" role). It creates and maintains everything else: DynamoDB, SQS, the Lambdas, and SSM parameters.
 
 
 ## User Quickstart

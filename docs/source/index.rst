@@ -29,8 +29,9 @@ single-writer Lambda is the only identity allowed to call
 Start here
 ----------
 
-* :doc:`installation/index` — install the CLI, and (once) the AWS
-  infrastructure.
+* :doc:`installation/index` — install the CLI, and set up the AWS
+  infrastructure (a one-time admin stage, then an engineer-run platform
+  stage).
 * :doc:`usage/index` — add, list, and remove blocks, including a self-test
   against a live site.
 * :doc:`theory/index` — how the table, queue, Lambdas, and WAF IP sets fit

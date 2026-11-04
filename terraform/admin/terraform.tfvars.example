@@ -1,0 +1,9 @@
+# Blockinator ADMIN stage configuration example
+# Copy to terraform.tfvars and customize for your environment
+
+# Deployment venue identifier
+venue = "<venue>"
+
+# Regex matching the platform engineers' IAM Identity Center (SSO) role name(s)
+# in this account; matching roles may assume the deployer role.
+deployer_sso_role_name_regex = "<sso-role-name-regex>"

@@ -144,8 +144,9 @@ CIDR, reason, operator, and source. Retention defaults to 90 days.
 WAF IP sets and the Web ACL
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Terraform creates two empty IP sets in **us-east-1** with scope
-``CLOUDFRONT``:
+The admin Terraform stage (``terraform/admin/``, applied once per venue
+by system administrators) creates two empty IP sets in **us-east-1**
+with scope ``CLOUDFRONT``:
 
 * ``<venue>-pds-ip-blocklist-ipv4``
 * ``<venue>-pds-ip-blocklist-ipv6``
@@ -191,11 +192,21 @@ Least privilege is intentional:
 Operators therefore cannot widen or empty the IP sets except by going
 through this pipeline.
 
+These roles and the operator policy are privileged resources, so they are
+created by the admin Terraform stage (``terraform/admin/``), which system
+administrators apply once per venue with elevated access. The platform
+stage (``terraform/``) creates no IAM at all — it refers to the roles and
+policy by name — so platform engineers can apply it whenever they need
+without "super user" permissions. The one privilege it needs,
+``iam:PassRole`` to attach the execution roles to the Lambdas, comes from
+a narrowly scoped ``*-deployer`` role that the admin stage creates and
+platform engineers assume. See :doc:`../installation/index`.
+
 
 SSM discovery
 -------------
 
-After apply, the stack publishes parameters under
+After apply, the platform stage publishes parameters under
 ``/pds/cds-infra/ip-blocklist/`` (table name, queue URL, IP set ARNs,
 audit log group, operator policy ARN). The CLI uses that prefix when
 ``--table`` / ``--queue`` and the matching environment variables are

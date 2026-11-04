@@ -48,7 +48,11 @@ Layout
 +===============================+============================================+
 | ``src/pds/blockinator/``      | CLI, DynamoDB/SQS client, CIDR helpers     |
 +-------------------------------+--------------------------------------------+
-| ``terraform/``                | Table, queue, IAM, Lambdas, WAF IP sets    |
+| ``terraform/``                | Platform stage: table, queue, Lambdas,     |
+|                               | SSM parameters (engineers, run as needed)  |
++-------------------------------+--------------------------------------------+
+| ``terraform/admin/``          | Admin stage: IAM roles/policies and WAF    |
+|                               | IP sets (system administrators, run once)  |
 +-------------------------------+--------------------------------------------+
 | ``terraform/lambda/``         | Updater, sweeper, and audit function code  |
 +-------------------------------+--------------------------------------------+
@@ -147,8 +151,9 @@ Two Roundup workflows ship with the repository:
   release.
 
 A separate ``terraform_cicd.yaml`` workflow formats and validates the
-Terraform root module. Plan/apply in that file stay commented until the
-venue OIDC role is wired up.
+Terraform root modules (the platform stage in ``terraform/`` and the
+admin stage in ``terraform/admin/``). Plan/apply in that file stay
+commented until the venue OIDC role is wired up.
 
 There is also branch CI, CodeQL, and the secrets workflow above.
 

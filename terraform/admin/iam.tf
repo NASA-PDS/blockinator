@@ -1,5 +1,11 @@
 # IAM for the three Lambdas plus the operator CLI.
 # Least privilege: only the updater role may call wafv2:UpdateIPSet.
+#
+# ⚠️ ADMIN STAGE: creating IAM roles and policies requires elevated ("super
+# user") access, so this file lives here rather than in the platform stage.
+# The DynamoDB table, SQS queue, and log groups referenced below are created
+# LATER by the platform stage; their ARNs are constructed in locals.tf from
+# the shared naming convention.
 
 # Shared trust policy: these roles can be assumed only by Lambda.
 data "aws_iam_policy_document" "lambda_assume" {
@@ -14,27 +20,24 @@ data "aws_iam_policy_document" "lambda_assume" {
 }
 
 resource "aws_iam_role" "updater" {
-  name                 = "${local.name_prefix}-updater"
-  description          = "Sole identity allowed to call wafv2:UpdateIPSet for the operator blocklist"
-  permissions_boundary = local.permissions_boundary
-  assume_role_policy   = data.aws_iam_policy_document.lambda_assume.json
-  tags                 = local.tags
+  name               = "${local.name_prefix}-updater"
+  description        = "Sole identity allowed to call wafv2:UpdateIPSet for the operator blocklist"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+  tags               = local.tags
 }
 
 resource "aws_iam_role" "sweeper" {
-  name                 = "${local.name_prefix}-sweeper"
-  description          = "Expire TTL'd blocklist rows and enqueue REMOVE mutations"
-  permissions_boundary = local.permissions_boundary
-  assume_role_policy   = data.aws_iam_policy_document.lambda_assume.json
-  tags                 = local.tags
+  name               = "${local.name_prefix}-sweeper"
+  description        = "Expire TTL'd blocklist rows and enqueue REMOVE mutations"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+  tags               = local.tags
 }
 
 resource "aws_iam_role" "audit" {
-  name                 = "${local.name_prefix}-audit"
-  description          = "Log DynamoDB stream mutations for the operator blocklist"
-  permissions_boundary = local.permissions_boundary
-  assume_role_policy   = data.aws_iam_policy_document.lambda_assume.json
-  tags                 = local.tags
+  name               = "${local.name_prefix}-audit"
+  description        = "Log DynamoDB stream mutations for the operator blocklist"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+  tags               = local.tags
 }
 
 data "aws_iam_policy_document" "updater" {
@@ -45,7 +48,7 @@ data "aws_iam_policy_document" "updater" {
       "logs:CreateLogStream",
       "logs:PutLogEvents",
     ]
-    resources = ["${aws_cloudwatch_log_group.updater.arn}:*"]
+    resources = ["${local.lambda_log_group_arns.updater}:*"]
   }
 
   # Consume the FIFO mutation bus (SQS event source mapping).
@@ -58,7 +61,7 @@ data "aws_iam_policy_document" "updater" {
       "sqs:GetQueueAttributes",
       "sqs:ChangeMessageVisibility",
     ]
-    resources = [aws_sqs_queue.ipset_mutations.arn]
+    resources = [local.queue_arn]
   }
 
   # Get-then-put of the full Addresses list; this is the only UpdateIPSet grant.
@@ -84,7 +87,7 @@ data "aws_iam_policy_document" "sweeper" {
       "logs:CreateLogStream",
       "logs:PutLogEvents",
     ]
-    resources = ["${aws_cloudwatch_log_group.sweeper.arn}:*"]
+    resources = ["${local.lambda_log_group_arns.sweeper}:*"]
   }
 
   # Query ACTIVE rows whose expires_at has passed, then SET status = EXPIRED.
@@ -97,8 +100,8 @@ data "aws_iam_policy_document" "sweeper" {
       "dynamodb:UpdateItem",
     ]
     resources = [
-      aws_dynamodb_table.ip_access_policies.arn,
-      "${aws_dynamodb_table.ip_access_policies.arn}/index/status-expires_at-index",
+      local.table_arn,
+      "${local.table_arn}/index/status-expires_at-index",
     ]
   }
 
@@ -106,7 +109,7 @@ data "aws_iam_policy_document" "sweeper" {
     sid       = "EnqueueRemove"
     effect    = "Allow"
     actions   = ["sqs:SendMessage"]
-    resources = [aws_sqs_queue.ipset_mutations.arn]
+    resources = [local.queue_arn]
   }
 }
 
@@ -118,10 +121,12 @@ data "aws_iam_policy_document" "audit" {
       "logs:CreateLogStream",
       "logs:PutLogEvents",
     ]
-    resources = ["${aws_cloudwatch_log_group.audit.arn}:*"]
+    resources = ["${local.lambda_log_group_arns.audit}:*"]
   }
 
   # Read the table stream (not the table itself); Lambda event source mapping.
+  # Stream ARNs embed a creation timestamp that cannot be predicted here, so
+  # this grants all streams of the (single) blocklist table.
   statement {
     sid    = "StreamRead"
     effect = "Allow"
@@ -131,7 +136,7 @@ data "aws_iam_policy_document" "audit" {
       "dynamodb:GetShardIterator",
       "dynamodb:ListStreams",
     ]
-    resources = [aws_dynamodb_table.ip_access_policies.stream_arn]
+    resources = ["${local.table_arn}/stream/*"]
   }
 }
 
@@ -167,8 +172,8 @@ data "aws_iam_policy_document" "operator" {
       "dynamodb:Query",
     ]
     resources = [
-      aws_dynamodb_table.ip_access_policies.arn,
-      "${aws_dynamodb_table.ip_access_policies.arn}/index/*",
+      local.table_arn,
+      "${local.table_arn}/index/*",
     ]
   }
 
@@ -176,7 +181,7 @@ data "aws_iam_policy_document" "operator" {
     sid       = "EnqueueMutations"
     effect    = "Allow"
     actions   = ["sqs:SendMessage"]
-    resources = [aws_sqs_queue.ipset_mutations.arn]
+    resources = [local.queue_arn]
   }
 
   # Discover table name / queue URL / IP set ARNs published under local.ssm_prefix.
@@ -184,7 +189,7 @@ data "aws_iam_policy_document" "operator" {
     sid       = "ReadSsm"
     effect    = "Allow"
     actions   = ["ssm:GetParameter"]
-    resources = ["arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}/*"]
+    resources = ["arn:aws:ssm:${local.region}:${local.account_id}:parameter${local.ssm_prefix}/*"]
   }
 }
 
